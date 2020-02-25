@@ -6,12 +6,24 @@ import (
 	"log"
 	"net"
 	"time"
+	"os"
+	"strings"
+	
 )
+func TimeIn(t time.Time, name string) (time.Time, error) {
+    loc, err := time.LoadLocation(name)
+    if err == nil {
+        t = t.In(loc)
+    }
+    return t, err
+}
 
-func handleConn(c net.Conn) {
+func handleConn(zone string,c net.Conn) {
 	defer c.Close()
 	for {
-		_, err := io.WriteString(c, time.Now().Format("15:04:05\n"))
+		
+		realTime,_ := TimeIn(time.Now(),zone)
+		_, err := io.WriteString(c,zone+"        :"+realTime.Format("15:04:05\n"))
 		if err != nil {
 			return // e.g., client disconnected
 		}
@@ -20,7 +32,14 @@ func handleConn(c net.Conn) {
 }
 
 func main() {
-	listener, err := net.Listen("tcp", "localhost:9090")
+	input := os.Args[1]
+
+	port := os.Args[4]
+	
+	var timeZone []string
+	timeZone=strings.Split(input,"=")
+
+	listener, err := net.Listen("tcp", "localhost:"+port)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -30,6 +49,6 @@ func main() {
 			log.Print(err) // e.g., connection aborted
 			continue
 		}
-		go handleConn(conn) // handle connections concurrently
+		go handleConn(timeZone[1], conn) // handle connections concurrently
 	}
 }
